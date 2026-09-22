@@ -1,0 +1,8 @@
+{
+  "name": "常廣羽球與網球社團報名管理系統",
+  "description": "常廣股份有限公司羽球與網球社團報名、自動分組、缺席追蹤與雲端同步管理系統",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
