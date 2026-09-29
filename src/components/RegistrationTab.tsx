@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Member, EventSession, Registration } from '../types';
 import { Calendar, Clock, MapPin, CheckCircle2, UserX, Download, Search, AlertCircle, FileText, Send, Sparkles } from 'lucide-react';
+import { ModalPortal } from './ModalPortal';
 
 interface RegistrationTabProps {
   session: EventSession;
@@ -330,9 +331,9 @@ export const RegistrationTab: React.FC<RegistrationTabProps> = ({
       </div>
 
       {/* Reason Input Modal (Dropdown Select) */}
-      {reasonModalOpen && selectedMemberForAbsent && (
-        <div className="fixed inset-0 bg-[#17262B]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[16px] max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-6 border border-[#DAD4C2] animate-scale-up">
+      <ModalPortal isOpen={Boolean(reasonModalOpen && selectedMemberForAbsent)} className="bg-white rounded-[16px] max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-6 border border-[#DAD4C2]">
+        {selectedMemberForAbsent && (
+          <>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-[12px] bg-[#FBE8E6] text-[#C25A5A] flex items-center justify-center font-bold">
@@ -400,9 +401,9 @@ export const RegistrationTab: React.FC<RegistrationTabProps> = ({
                 確認送出請假
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </ModalPortal>
     </div>
   );
 };

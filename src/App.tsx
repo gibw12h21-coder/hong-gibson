@@ -5,6 +5,7 @@ import { OverviewTab } from './components/OverviewTab';
 import { MembersAttendanceTab } from './components/MembersAttendanceTab';
 import { NotificationTab } from './components/NotificationTab';
 import { AuthScreen } from './components/AuthScreen';
+import { ViewportCenterWatcher } from './components/ViewportCenterWatcher';
 
 export default function App() {
   const [currentSport, setCurrentSport] = useState<'badminton' | 'tennis'>('badminton');
@@ -27,6 +28,28 @@ export default function App() {
   const [members, setMembers] = useState<Member[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [notificationLogs, setNotificationLogs] = useState<NotificationLog[]>([]);
+  const [departments, setDepartments] = useState<string[]>(() => {
+    const saved = localStorage.getItem('lagis_departments');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((d: string) => d.replace(/部$/, '課'));
+        }
+      } catch (e) { /* ignore */ }
+    }
+    return ['研發課', '業務課', '品保課', '生管課', '管理課', '總經辦', '資管課', '行銷課'];
+  });
+
+  const handleAddDepartment = (newDept: string) => {
+    const trimmed = newDept.trim();
+    if (!trimmed) return;
+    if (!departments.includes(trimmed)) {
+      const updated = [...departments, trimmed];
+      setDepartments(updated);
+      localStorage.setItem('lagis_departments', JSON.stringify(updated));
+    }
+  };
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -300,12 +323,15 @@ export default function App() {
         onAdminLogin={handleAdminLogin}
         currentSport={currentSport}
         setCurrentSport={setCurrentSport}
+        departments={departments}
+        onAddDepartment={handleAddDepartment}
       />
     );
   }
 
   return phoneWrapper(
     <div className="min-h-full bg-[#FAF8F5] text-slate-900 flex flex-col font-sans selection:bg-orange-600 selection:text-white">
+      <ViewportCenterWatcher />
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -343,8 +369,11 @@ export default function App() {
             registrations={registrations}
             currentUser={currentUser}
             isAdmin={isAdmin}
+            departments={departments}
+            onAddDepartment={handleAddDepartment}
             onUpdateRegistration={handleUpdateRegistration}
             onAddMember={handleAddMember}
+            onUpdateMember={handleUpdateMember}
             onUpdateMemberSkill={handleUpdateMemberSkill}
             onResetAbsence={handleResetAbsence}
             onClearAllMembers={handleClearAllMembers}
@@ -359,6 +388,8 @@ export default function App() {
             members={members}
             onUpdateMember={handleUpdateMember}
             isAdmin={isAdmin}
+            departments={departments}
+            onAddDepartment={handleAddDepartment}
           />
         )}
       </main>

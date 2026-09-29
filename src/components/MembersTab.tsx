@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Member, SkillLevel } from '../types';
 import { Users, UserPlus, AlertTriangle, ShieldAlert, Award, Mail, Phone, Search, CheckCircle2, Trash2, AlertCircle } from 'lucide-react';
+import { ModalPortal } from './ModalPortal';
 
 interface MembersTabProps {
   members: Member[];
@@ -29,7 +30,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
   const [skillLevel, setSkillLevel] = useState<SkillLevel>('B-中階');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [departments, setDepartments] = useState<string[]>(['研發部', '業務部', '品保部', '生管部', '管理部', '總經辦', '資管部', '行銷部']);
+  const [departments, setDepartments] = useState<string[]>(['研發課', '業務課', '品保課', '生管課', '管理課', '總經辦', '資管課', '行銷課']);
   const [customDeptInput, setCustomDeptInput] = useState('');
 
   const handleAddCustomDept = () => {
@@ -279,179 +280,171 @@ export const MembersTab: React.FC<MembersTabProps> = ({
       )}
 
       {/* Add Member Modal */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-[#17262B]/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[16px] max-w-md w-full p-6 sm:p-8 shadow-2xl border border-[#DAD4C2] animate-scale-up space-y-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-black text-[#17262B]">新增羽球社社員</h3>
-                <span className="text-[10px] font-bold bg-[#274A56] text-[#F4F1E7] px-2 py-0.5 rounded-full inline-block mt-1">
-                  🛡️ 管理員模式 (支援自訂部門)
-                </span>
-              </div>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-[#F4F1E7] text-[#4B5D62] hover:bg-[#DAD4C2] flex items-center justify-center font-bold cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
+      <ModalPortal isOpen={isAddModalOpen} className="bg-white rounded-[16px] max-w-md w-full p-6 sm:p-8 shadow-2xl border border-[#DAD4C2] space-y-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-black text-[#17262B]">新增羽球社社員</h3>
+            <span className="text-[10px] font-bold bg-[#274A56] text-[#F4F1E7] px-2 py-0.5 rounded-full inline-block mt-1">
+              🛡️ 管理員模式 (支援自訂部門)
+            </span>
+          </div>
+          <button
+            onClick={() => setIsAddModalOpen(false)}
+            className="w-8 h-8 rounded-full bg-[#F4F1E7] text-[#4B5D62] hover:bg-[#DAD4C2] flex items-center justify-center font-bold cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
 
-            <form onSubmit={handleCreateMember} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-[#17262B] uppercase tracking-wider block">社員姓名 *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="例如：王小明"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  className="w-full bg-[#F4F1E7]/50 border border-[#DAD4C2] rounded-[12px] px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#E2794F]"
-                />
-              </div>
+        <form onSubmit={handleCreateMember} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-[#17262B] uppercase tracking-wider block">社員姓名 *</label>
+            <input
+              type="text"
+              required
+              placeholder="例如：王小明"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full bg-[#F4F1E7]/50 border border-[#DAD4C2] rounded-[12px] px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#E2794F]"
+            />
+          </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-[#17262B] uppercase tracking-wider block">部門 / 單位 *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="例如：研發部 或 自訂部門名稱"
-                  value={department}
-                  onChange={e => setDepartment(e.target.value)}
-                  className="w-full bg-[#F4F1E7]/50 border border-[#DAD4C2] rounded-[12px] px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#E2794F]"
-                />
-                <div className="flex flex-wrap gap-1.5 items-center mt-2">
-                  {departments.map((dept) => (
-                    <button
-                      key={dept}
-                      type="button"
-                      onClick={() => setDepartment(dept)}
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-[8px] border transition-all cursor-pointer ${
-                        department === dept ? 'bg-[#274A56] text-[#F4F1E7] border-[#274A56]' : 'bg-[#F4F1E7] text-[#4B5D62] border-[#DAD4C2] hover:bg-[#274A56] hover:text-white'
-                      }`}
-                    >
-                      {dept}
-                    </button>
-                  ))}
-                  <div className="flex items-center gap-1 mt-1 sm:mt-0">
-                    <input
-                      type="text"
-                      placeholder="自訂新部門..."
-                      value={customDeptInput}
-                      onChange={(e) => setCustomDeptInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomDept(); } }}
-                      className="bg-white border border-[#DAD4C2] rounded-lg px-2 py-1 text-[11px] w-28 focus:outline-none focus:ring-1 focus:ring-[#E2794F]"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCustomDept}
-                      className="bg-[#E2794F] hover:bg-[#C36A3E] text-white text-xs font-black w-6 h-6 rounded-lg flex items-center justify-center cursor-pointer shadow-2xs"
-                      title="新增自訂部門"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-[#17262B] uppercase tracking-wider block">實力分級</label>
-                <select
-                  value={skillLevel}
-                  onChange={e => setSkillLevel(e.target.value as SkillLevel)}
-                  className="w-full bg-[#F4F1E7]/50 border border-[#DAD4C2] rounded-[12px] px-4 py-2.5 text-xs font-bold text-[#17262B] focus:outline-none focus:ring-2 focus:ring-[#E2794F]"
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-[#17262B] uppercase tracking-wider block">部門 / 單位 *</label>
+            <input
+              type="text"
+              required
+              placeholder="例如：研發課 或 自訂部門名稱"
+              value={department}
+              onChange={e => setDepartment(e.target.value)}
+              className="w-full bg-[#F4F1E7]/50 border border-[#DAD4C2] rounded-[12px] px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#E2794F]"
+            />
+            <div className="flex flex-wrap gap-1.5 items-center mt-2">
+              {departments.map((dept) => (
+                <button
+                  key={dept}
+                  type="button"
+                  onClick={() => setDepartment(dept)}
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-[8px] border transition-all cursor-pointer ${
+                    department === dept ? 'bg-[#274A56] text-[#F4F1E7] border-[#274A56]' : 'bg-[#F4F1E7] text-[#4B5D62] border-[#DAD4C2] hover:bg-[#274A56] hover:text-white'
+                  }`}
                 >
-                  <option value="A-進階">A-進階 (校隊/高手)</option>
-                  <option value="B-中階">B-中階 (常規打球/雙打順暢)</option>
-                  <option value="C-初階">C-初階 (新手入門/快樂流汗)</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-[#17262B] uppercase tracking-wider block">電子郵件</label>
+                  {dept}
+                </button>
+              ))}
+              <div className="flex items-center gap-1 mt-1 sm:mt-0">
                 <input
-                  type="email"
-                  placeholder="name@company.com"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  className="w-full bg-[#F4F1E7]/50 border border-[#DAD4C2] rounded-[12px] px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#E2794F]"
+                  type="text"
+                  placeholder="自訂新部門..."
+                  value={customDeptInput}
+                  onChange={(e) => setCustomDeptInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomDept(); } }}
+                  className="bg-white border border-[#DAD4C2] rounded-lg px-2 py-1 text-[11px] w-28 focus:outline-none focus:ring-1 focus:ring-[#E2794F]"
                 />
-              </div>
-
-              <div className="flex space-x-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="flex-1 bg-[#F4F1E7] hover:bg-[#DAD4C2] text-[#17262B] font-bold py-3 rounded-[12px] transition-all cursor-pointer"
+                  onClick={handleAddCustomDept}
+                  className="bg-[#E2794F] hover:bg-[#C36A3E] text-white text-xs font-black w-6 h-6 rounded-lg flex items-center justify-center cursor-pointer shadow-2xs"
+                  title="新增自訂部門"
                 >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-[#E2794F] hover:bg-[#C36A3E] text-white font-bold py-3 rounded-[12px] shadow-sm transition-all cursor-pointer"
-                >
-                  確認新增
+                  +
                 </button>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-[#17262B] uppercase tracking-wider block">實力分級</label>
+            <select
+              value={skillLevel}
+              onChange={e => setSkillLevel(e.target.value as SkillLevel)}
+              className="w-full bg-[#F4F1E7]/50 border border-[#DAD4C2] rounded-[12px] px-4 py-2.5 text-xs font-bold text-[#17262B] focus:outline-none focus:ring-2 focus:ring-[#E2794F]"
+            >
+              <option value="A-進階">A-進階 (校隊/高手)</option>
+              <option value="B-中階">B-中階 (常規打球/雙打順暢)</option>
+              <option value="C-初階">C-初階 (新手入門/快樂流汗)</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-[#17262B] uppercase tracking-wider block">電子郵件</label>
+            <input
+              type="email"
+              placeholder="name@company.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="w-full bg-[#F4F1E7]/50 border border-[#DAD4C2] rounded-[12px] px-4 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#E2794F]"
+            />
+          </div>
+
+          <div className="flex space-x-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(false)}
+              className="flex-1 bg-[#F4F1E7] hover:bg-[#DAD4C2] text-[#17262B] font-bold py-3 rounded-[12px] transition-all cursor-pointer"
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              className="flex-1 bg-[#E2794F] hover:bg-[#C36A3E] text-white font-bold py-3 rounded-[12px] shadow-sm transition-all cursor-pointer"
+            >
+              確認新增
+            </button>
+          </div>
+        </form>
+      </ModalPortal>
 
       {/* Clear All Confirmation Modal with Typing Requirement */}
-      {isClearModalOpen && (
-        <div className="fixed inset-0 z-50 bg-[#17262B]/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[16px] max-w-md w-full p-6 sm:p-8 shadow-2xl border border-[#DAD4C2] animate-scale-up space-y-6">
-            <div className="w-16 h-16 bg-[#FBE8E6] text-[#C25A5A] rounded-[16px] flex items-center justify-center mx-auto shadow-2xs">
-              <Trash2 className="w-8 h-8" />
-            </div>
-            <div className="text-center space-y-2">
-              <h3 className="text-xl font-black text-[#17262B]">安全確認：清除所有資料</h3>
-              <p className="text-xs text-[#4B5D62] leading-relaxed">
-                此動作將永久清空所有社員名冊與本週報名記錄。請在下方輸入 <strong className="text-[#C25A5A]">「確認清除」</strong> 以解鎖刪除按鈕：
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <input
-                type="text"
-                placeholder="請輸入：確認清除"
-                value={clearConfirmText}
-                onChange={e => setClearConfirmText(e.target.value)}
-                className="w-full bg-[#F4F1E7]/50 border border-[#DAD4C2] rounded-[12px] p-3 text-xs font-bold text-center text-[#17262B] focus:outline-none focus:ring-2 focus:ring-[#C25A5A]"
-              />
-            </div>
-
-            <div className="flex space-x-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsClearModalOpen(false)}
-                className="flex-1 bg-[#F4F1E7] hover:bg-[#DAD4C2] text-[#17262B] font-bold py-3 rounded-[12px] transition-all cursor-pointer"
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                disabled={clearConfirmText !== '確認清除'}
-                onClick={() => {
-                  if (clearConfirmText === '確認清除') {
-                    onClearAllMembers?.();
-                    setIsClearModalOpen(false);
-                    setClearConfirmText('');
-                  }
-                }}
-                className={`flex-1 py-3 rounded-[12px] font-bold transition-all ${
-                  clearConfirmText === '確認清除'
-                    ? 'bg-[#C25A5A] hover:bg-[#A94C4C] text-white shadow-sm cursor-pointer'
-                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                }`}
-              >
-                確認執行清除
-              </button>
-            </div>
-          </div>
+      <ModalPortal isOpen={isClearModalOpen} className="bg-white rounded-[16px] max-w-md w-full p-6 sm:p-8 shadow-2xl border border-[#DAD4C2] space-y-6">
+        <div className="w-16 h-16 bg-[#FBE8E6] text-[#C25A5A] rounded-[16px] flex items-center justify-center mx-auto shadow-2xs">
+          <Trash2 className="w-8 h-8" />
         </div>
-      )}
+        <div className="text-center space-y-2">
+          <h3 className="text-xl font-black text-[#17262B]">安全確認：清除所有資料</h3>
+          <p className="text-xs text-[#4B5D62] leading-relaxed">
+            此動作將永久清空所有社員名冊與本週報名記錄。請在下方輸入 <strong className="text-[#C25A5A]">「確認清除」</strong> 以解鎖刪除按鈕：
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <input
+            type="text"
+            placeholder="請輸入：確認清除"
+            value={clearConfirmText}
+            onChange={e => setClearConfirmText(e.target.value)}
+            className="w-full bg-[#F4F1E7]/50 border border-[#DAD4C2] rounded-[12px] p-3 text-xs font-bold text-center text-[#17262B] focus:outline-none focus:ring-2 focus:ring-[#C25A5A]"
+          />
+        </div>
+
+        <div className="flex space-x-3 pt-2">
+          <button
+            type="button"
+            onClick={() => setIsClearModalOpen(false)}
+            className="flex-1 bg-[#F4F1E7] hover:bg-[#DAD4C2] text-[#17262B] font-bold py-3 rounded-[12px] transition-all cursor-pointer"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            disabled={clearConfirmText !== '確認清除'}
+            onClick={() => {
+              if (clearConfirmText === '確認清除') {
+                onClearAllMembers?.();
+                setIsClearModalOpen(false);
+                setClearConfirmText('');
+              }
+            }}
+            className={`flex-1 py-3 rounded-[12px] font-bold transition-all ${
+              clearConfirmText === '確認清除'
+                ? 'bg-[#C25A5A] hover:bg-[#A94C4C] text-white shadow-sm cursor-pointer'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+            }`}
+          >
+            確認執行清除
+          </button>
+        </div>
+      </ModalPortal>
     </div>
   );
 };

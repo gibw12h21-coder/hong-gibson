@@ -7,6 +7,8 @@ interface NotificationTabProps {
   members: Member[];
   onUpdateMember: (member: Member) => void;
   isAdmin: boolean;
+  departments: string[];
+  onAddDepartment: (dept: string) => void;
 }
 
 export const NotificationTab: React.FC<NotificationTabProps> = ({
@@ -14,6 +16,8 @@ export const NotificationTab: React.FC<NotificationTabProps> = ({
   members,
   onUpdateMember,
   isAdmin,
+  departments,
+  onAddDepartment,
 }) => {
   const [selectedMemberId, setSelectedMemberId] = useState<string>(currentUser ? currentUser.id : (members[0]?.id || ''));
   const targetMember = members.find(m => m.id === selectedMemberId) || currentUser || members[0];
@@ -23,15 +27,12 @@ export const NotificationTab: React.FC<NotificationTabProps> = ({
   const [editEmail, setEditEmail] = useState(targetMember?.email || '');
   const [editPhone, setEditPhone] = useState(targetMember?.phone || '');
   const [editSkill, setEditSkill] = useState<SkillLevel>(targetMember?.skillLevel || 'B-中階');
-  const [departments, setDepartments] = useState<string[]>(['研發部', '業務部', '品保部', '生管部', '管理部', '總經辦', '資管部', '行銷部']);
   const [customDeptInput, setCustomDeptInput] = useState('');
 
   const handleAddCustomDept = () => {
     const trimmed = customDeptInput.trim();
     if (!trimmed) return;
-    if (!departments.includes(trimmed)) {
-      setDepartments([...departments, trimmed]);
-    }
+    onAddDepartment(trimmed);
     setEditDept(trimmed);
     setCustomDeptInput('');
   };
@@ -149,7 +150,7 @@ export const NotificationTab: React.FC<NotificationTabProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="例如：研發部 或 自訂部門名稱"
+                  placeholder="例如：研發課 或 自訂部門名稱"
                   value={editDept}
                   onChange={(e) => setEditDept(e.target.value)}
                   className="w-full bg-[#F4F1E7]/50 border border-[#DAD4C2] rounded-[12px] px-4 py-3 text-xs font-medium text-[#17262B] focus:outline-none focus:ring-2 focus:ring-[#E2794F]"

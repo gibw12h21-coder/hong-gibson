@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Member, EventSession, Registration } from '../types';
 import { Calendar, Clock, MapPin, Users, ArrowRight, UserX, ShieldAlert, CheckCircle2, ChevronRight, Mail, RefreshCw, X } from 'lucide-react';
+import { ModalPortal } from './ModalPortal';
 
 interface OverviewTabProps {
   session: EventSession;
@@ -301,52 +302,48 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       </div>
 
       {/* Attenders List Modal */}
-      {showAttendersModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <h3 className="text-lg font-extrabold text-slate-900 flex items-center">
-                <Users className="w-5 h-5 mr-2 text-orange-600" /> 本週參加社友名單 ({attendingCount})
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowAttendersModal(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
-              {attendingMembers.length === 0 ? (
-                <p className="text-center py-8 text-slate-400 text-xs">目前尚無社員登記參加本週活動</p>
-              ) : (
-                attendingMembers.map((m) => (
-                  <div key={m.id} className="py-3 flex items-center justify-between text-sm">
-                    <div>
-                      <span className="font-bold text-slate-900">{m.name}</span>
-                      <span className="text-xs text-slate-400 ml-2">({m.department})</span>
-                    </div>
-                    <span className="text-xs font-bold bg-orange-100 text-orange-700 px-2.5 py-1 rounded-lg">
-                      {m.skillLevel}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="pt-2 border-t border-slate-100 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowAttendersModal(false)}
-                className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-5 py-2.5 rounded-xl cursor-pointer"
-              >
-                關閉
-              </button>
-            </div>
-          </div>
+      <ModalPortal isOpen={showAttendersModal} className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-6">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <h3 className="text-lg font-extrabold text-slate-900 flex items-center">
+            <Users className="w-5 h-5 mr-2 text-orange-600" /> 本週參加社友名單 ({attendingCount})
+          </h3>
+          <button
+            type="button"
+            onClick={() => setShowAttendersModal(false)}
+            className="p-2 text-slate-400 hover:text-slate-600 rounded-xl cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-      )}
+
+        <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+          {attendingMembers.length === 0 ? (
+            <p className="text-center py-8 text-slate-400 text-xs">目前尚無社員登記參加本週活動</p>
+          ) : (
+            attendingMembers.map((m) => (
+              <div key={m.id} className="py-3 flex items-center justify-between text-sm">
+                <div>
+                  <span className="font-bold text-slate-900">{m.name}</span>
+                  <span className="text-xs text-slate-400 ml-2">({m.department})</span>
+                </div>
+                <span className="text-xs font-bold bg-orange-100 text-orange-700 px-2.5 py-1 rounded-lg">
+                  {m.skillLevel}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="pt-2 border-t border-slate-100 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setShowAttendersModal(false)}
+            className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-5 py-2.5 rounded-xl cursor-pointer"
+          >
+            關閉
+          </button>
+        </div>
+      </ModalPortal>
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Member, SkillLevel } from '../types';
 import { ShieldCheck, UserCheck, Lock, ArrowRight, X, KeyRound, Smartphone } from 'lucide-react';
+import { ModalPortal } from './ModalPortal';
 
 interface AuthScreenProps {
   members: Member[];
@@ -10,6 +11,8 @@ interface AuthScreenProps {
   onAdminLogin: () => void;
   currentSport: 'badminton' | 'tennis';
   setCurrentSport: (sport: 'badminton' | 'tennis') => void;
+  departments: string[];
+  onAddDepartment: (dept: string) => void;
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({
@@ -19,6 +22,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   onAdminLogin,
   currentSport,
   setCurrentSport,
+  departments,
+  onAddDepartment,
 }) => {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [loginInput, setLoginInput] = useState('');
@@ -33,15 +38,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [regEmail, setRegEmail] = useState('');
   const [regId, setRegId] = useState('');
   const [regSkill, setRegSkill] = useState<SkillLevel>('B-中階');
-  const [departments, setDepartments] = useState<string[]>(['研發部', '業務部', '品保部', '生管部', '管理部', '總經辦', '資管部', '行銷部']);
   const [customAuthDeptInput, setCustomAuthDeptInput] = useState('');
 
   const handleAddCustomAuthDept = () => {
     const trimmed = customAuthDeptInput.trim();
     if (!trimmed) return;
-    if (!departments.includes(trimmed)) {
-      setDepartments([...departments, trimmed]);
-    }
+    onAddDepartment(trimmed);
     setRegDept(trimmed);
     setCustomAuthDeptInput('');
   };
@@ -249,7 +251,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   <label className="block text-xs font-bold text-[#17262B] uppercase mb-1">所屬部門</label>
                   <input
                     type="text"
-                    placeholder="例：研發部"
+                    placeholder="例：研發課"
                     value={regDept}
                     onChange={(e) => setRegDept(e.target.value)}
                     className="w-full bg-[#F4F1E7]/50 border border-[#DAD4C2] rounded-[12px] px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#E2794F] text-[#17262B]"
@@ -353,56 +355,52 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       </div>
 
       {/* Admin Login Modal Window */}
-      {showAdminModal && (
-        <div className="fixed inset-0 bg-[#17262B]/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-[16px] p-6 sm:p-8 max-w-sm w-full shadow-2xl border border-[#DAD4C2] space-y-5 relative">
-            <button
-              type="button"
-              onClick={() => setShowAdminModal(false)}
-              className="absolute top-5 right-5 text-[#4B5D62] hover:text-[#17262B] cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+      <ModalPortal isOpen={showAdminModal} className="bg-white rounded-[16px] p-6 sm:p-8 max-w-sm w-full shadow-2xl border border-[#DAD4C2] space-y-5 relative">
+        <button
+          type="button"
+          onClick={() => setShowAdminModal(false)}
+          className="absolute top-5 right-5 text-[#4B5D62] hover:text-[#17262B] cursor-pointer"
+        >
+          <X className="w-5 h-5" />
+        </button>
 
-            <div className="w-12 h-12 bg-orange-100 text-[#E2794F] rounded-[12px] flex items-center justify-center mx-auto">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-
-            <div className="text-center">
-              <h3 className="text-lg font-black text-[#17262B]">{sportName}管理員授權驗證</h3>
-              <p className="text-xs text-[#4B5D62] mt-1">
-                安全防護：進入管理員完整權限模式請輸入授權密碼。
-              </p>
-            </div>
-
-            <div className="space-y-2 text-left">
-              <label className="block text-xs font-bold text-[#17262B] uppercase tracking-wider">管理員密碼 *</label>
-              <input
-                type="password"
-                placeholder="請輸入密碼"
-                value={adminInputId}
-                onChange={(e) => setAdminInputId(e.target.value)}
-                className="w-full bg-[#F4F1E7]/50 border border-[#DAD4C2] rounded-[12px] px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#E2794F] text-[#17262B]"
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (adminInputId.trim().toUpperCase() === 'L0814' || adminInputId.trim() === '0814' || adminInputId.trim() === 'admin') {
-                  setShowAdminModal(false);
-                  onAdminLogin();
-                } else {
-                  alert('❌ 驗證失敗：管理員密碼錯誤！');
-                }
-              }}
-              className="w-full bg-[#274A56] hover:bg-[#33606C] text-[#F4F1E7] font-bold py-3.5 px-4 rounded-[12px] shadow-sm transition-all cursor-pointer"
-            >
-              驗證並進入管理員模式
-            </button>
-          </div>
+        <div className="w-12 h-12 bg-orange-100 text-[#E2794F] rounded-[12px] flex items-center justify-center mx-auto">
+          <ShieldCheck className="w-6 h-6" />
         </div>
-      )}
+
+        <div className="text-center">
+          <h3 className="text-lg font-black text-[#17262B]">{sportName}管理員授權驗證</h3>
+          <p className="text-xs text-[#4B5D62] mt-1">
+            安全防護：進入管理員完整權限模式請輸入授權密碼。
+          </p>
+        </div>
+
+        <div className="space-y-2 text-left">
+          <label className="block text-xs font-bold text-[#17262B] uppercase tracking-wider">管理員密碼 *</label>
+          <input
+            type="password"
+            placeholder="請輸入密碼"
+            value={adminInputId}
+            onChange={(e) => setAdminInputId(e.target.value)}
+            className="w-full bg-[#F4F1E7]/50 border border-[#DAD4C2] rounded-[12px] px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#E2794F] text-[#17262B]"
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (adminInputId.trim().toUpperCase() === 'L0814' || adminInputId.trim() === '0814' || adminInputId.trim() === 'admin') {
+              setShowAdminModal(false);
+              onAdminLogin();
+            } else {
+              alert('❌ 驗證失敗：管理員密碼錯誤！');
+            }
+          }}
+          className="w-full bg-[#274A56] hover:bg-[#33606C] text-[#F4F1E7] font-bold py-3.5 px-4 rounded-[12px] shadow-sm transition-all cursor-pointer"
+        >
+          驗證並進入管理員模式
+        </button>
+      </ModalPortal>
     </div>
   );
 };

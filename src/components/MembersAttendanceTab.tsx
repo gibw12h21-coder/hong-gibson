@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Member, EventSession, Registration, SkillLevel } from '../types';
 import { Trash2, CheckCircle2, Search } from 'lucide-react';
+import { ModalPortal } from './ModalPortal';
 
 interface MembersAttendanceTabProps {
   session: EventSession;
@@ -8,8 +9,11 @@ interface MembersAttendanceTabProps {
   registrations: Registration[];
   currentUser?: Member | null;
   isAdmin?: boolean;
+  departments: string[];
+  onAddDepartment: (dept: string) => void;
   onUpdateRegistration: (memberId: string, status: 'attending' | 'absent', reason?: string) => void;
   onAddMember: (member: Omit<Member, 'id' | 'totalAttendance' | 'consecutiveAbsences'>) => void;
+  onUpdateMember: (member: Member) => void;
   onUpdateMemberSkill: (memberId: string, level: SkillLevel) => void;
   onResetAbsence: (memberId: string) => void;
   onClearAllMembers: () => void;
@@ -23,8 +27,11 @@ export const MembersAttendanceTab: React.FC<MembersAttendanceTabProps> = ({
   registrations,
   currentUser,
   isAdmin = false,
+  departments,
+  onAddDepartment,
   onUpdateRegistration,
   onAddMember,
+  onUpdateMember,
   onUpdateMemberSkill,
   onClearAllMembers,
   onExportCsv,
@@ -36,6 +43,8 @@ export const MembersAttendanceTab: React.FC<MembersAttendanceTabProps> = ({
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSelfRegisterModalOpen, setIsSelfRegisterModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [reasonModalOpen, setReasonModalOpen] = useState(false);
   const [clearModalOpen, setClearModalOpen] = useState(false);
   const [careModalOpen, setCareModalOpen] = useState(false);
@@ -46,16 +55,58 @@ export const MembersAttendanceTab: React.FC<MembersAttendanceTabProps> = ({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
-  const [departments, setDepartments] = useState<string[]>(['研發部', '業務部', '品保部', '生管部', '管理部', '總經辦', '資管部', '行銷部']);
   const [customNewDeptInput, setCustomNewDeptInput] = useState('');
   const [customSelfDeptInput, setCustomSelfDeptInput] = useState('');
+  const [customEditDeptInput, setCustomEditDeptInput] = useState('');
+
+  // Edit member form state
+  const [editName, setEditName] = useState('');
+  const [editDept, setEditDept] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editSkill, setEditSkill] = useState<SkillLevel>('B-中階');
+
+  const handleOpenEditMember = (member: Member) => {
+    setEditingMemberId(member.id);
+    setEditName(member.name);
+    setEditDept(member.department);
+    setEditEmail(member.email);
+    setEditPhone(member.phone);
+    setEditSkill(member.skillLevel);
+    setIsEditModalOpen(true);
+  };
+
+  const handleAddCustomEditDept = () => {
+    const trimmed = customEditDeptInput.trim();
+    if (!trimmed) return;
+    onAddDepartment(trimmed);
+    setEditDept(trimmed);
+    setCustomEditDeptInput('');
+  };
+
+  const handleEditMemberSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMemberId) return;
+    const target = members.find(m => m.id === editingMemberId);
+    if (!target) return;
+
+    const updated: Member = {
+      ...target,
+      name: editName.trim(),
+      department: editDept.trim(),
+      email: editEmail.trim(),
+      phone: editPhone.trim(),
+      skillLevel: editSkill,
+    };
+    onUpdateMember(updated);
+    setIsEditModalOpen(false);
+    alert('✅ 社員資料與電子信箱更新成功！');
+  };
 
   const handleAddCustomNewDept = () => {
     const trimmed = customNewDeptInput.trim();
     if (!trimmed) return;
-    if (!departments.includes(trimmed)) {
-      setDepartments([...departments, trimmed]);
-    }
+    onAddDepartment(trimmed);
     setNewDept(trimmed);
     setCustomNewDeptInput('');
   };
@@ -63,9 +114,7 @@ export const MembersAttendanceTab: React.FC<MembersAttendanceTabProps> = ({
   const handleAddCustomSelfDept = () => {
     const trimmed = customSelfDeptInput.trim();
     if (!trimmed) return;
-    if (!departments.includes(trimmed)) {
-      setDepartments([...departments, trimmed]);
-    }
+    onAddDepartment(trimmed);
     setSelfDept(trimmed);
     setCustomSelfDeptInput('');
   };
@@ -340,7 +389,17 @@ export const MembersAttendanceTab: React.FC<MembersAttendanceTabProps> = ({
                       )}
                     </div>
                     {isAdmin && (
-                      <div className="text-xs text-slate-400 mt-0.5">{member.email} ｜ {member.department} ｜ 工號：{member.id}</div>
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <span className="text-xs text-slate-500 font-mono">📧 {member.email} ｜ 🏢 {member.department} ｜ ID：{member.id}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditMember(member)}
+                          className="bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer flex items-center space-x-1"
+                          title="管理員編輯社員資料與電子信箱"
+                        >
+                          <span>✏️ 編輯資料</span>
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -437,352 +496,443 @@ export const MembersAttendanceTab: React.FC<MembersAttendanceTabProps> = ({
       </div>
 
       {/* Modals */}
-      {reasonModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 shadow-xl">
-            <h3 className="text-lg font-bold text-slate-900">填寫請假理由 ({selectedMemberForAbsent?.name})</h3>
-            <textarea
-              rows={3}
-              placeholder="請輸入請假原因..."
-              value={tempReason}
-              onChange={(e) => setTempReason(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+      <ModalPortal isOpen={reasonModalOpen} className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 shadow-xl">
+        <h3 className="text-lg font-bold text-slate-900">填寫請假理由 ({selectedMemberForAbsent?.name})</h3>
+        <textarea
+          rows={3}
+          placeholder="請輸入請假原因..."
+          value={tempReason}
+          onChange={(e) => setTempReason(e.target.value)}
+          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+        />
+        <div className="flex space-x-2 justify-end">
+          <button
+            type="button"
+            onClick={() => setReasonModalOpen(false)}
+            className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveReason}
+            className="px-4 py-2 bg-orange-600 text-white text-xs font-bold rounded-xl cursor-pointer"
+          >
+            確認儲存
+          </button>
+        </div>
+      </ModalPortal>
+
+      <ModalPortal isOpen={isAddModalOpen} className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-slate-900">手動新增社員</h3>
+          {isAdmin && (
+            <span className="text-[10px] font-bold bg-[#274A56] text-[#F4F1E7] px-2.5 py-1 rounded-full">
+              🛡️ 管理員模式 (支援自訂部門)
+            </span>
+          )}
+        </div>
+        <form onSubmit={handleAddSubmit} className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">姓名 *</label>
+            <input
+              type="text"
+              required
+              placeholder="例：王小明"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
             />
-            <div className="flex space-x-2 justify-end">
-              <button
-                onClick={() => setReasonModalOpen(false)}
-                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleSaveReason}
-                className="px-4 py-2 bg-orange-600 text-white text-xs font-bold rounded-xl cursor-pointer"
-              >
-                確認儲存
-              </button>
-            </div>
           </div>
-        </div>
-      )}
-
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900">手動新增社員</h3>
-              {isAdmin && (
-                <span className="text-[10px] font-bold bg-[#274A56] text-[#F4F1E7] px-2.5 py-1 rounded-full">
-                  🛡️ 管理員模式 (支援自訂部門)
-                </span>
-              )}
-            </div>
-            <form onSubmit={handleAddSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">姓名 *</label>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">部門</label>
+            <input
+              type="text"
+              placeholder="例：研發課 或 自訂部門名稱"
+              value={newDept}
+              onChange={(e) => setNewDept(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+            />
+            <div className="flex flex-wrap gap-1.5 items-center mt-2">
+              {departments.map((dept) => (
+                <button
+                  key={dept}
+                  type="button"
+                  onClick={() => setNewDept(dept)}
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                    newDept === dept ? 'bg-orange-600 text-white border-orange-600' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                  }`}
+                >
+                  {dept}
+                </button>
+              ))}
+              <div className="flex items-center gap-1 mt-1 sm:mt-0">
                 <input
                   type="text"
-                  required
-                  placeholder="例：王小明"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+                  placeholder="自訂新部門..."
+                  value={customNewDeptInput}
+                  onChange={(e) => setCustomNewDeptInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomNewDept(); } }}
+                  className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-[11px] w-28 focus:outline-none focus:ring-1 focus:ring-orange-500"
                 />
+                <button
+                  type="button"
+                  onClick={handleAddCustomNewDept}
+                  className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-black w-6 h-6 rounded-lg flex items-center justify-center cursor-pointer shadow-2xs"
+                  title="新增自訂部門"
+                >
+                  +
+                </button>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">部門</label>
+            </div>
+          </div>
+          <div className="flex space-x-2 justify-end pt-2">
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(false)}
+              className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-orange-600 text-white text-xs font-bold rounded-xl cursor-pointer"
+            >
+              新增
+            </button>
+          </div>
+        </form>
+      </ModalPortal>
+
+      <ModalPortal isOpen={isSelfRegisterModalOpen} className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 shadow-xl max-h-[90vh] overflow-y-auto">
+        <h3 className="text-lg font-bold text-slate-900">自動帶入登入資料報名</h3>
+        <p className="text-xs text-slate-500">已自動載入您的登入身分與部門，點擊確認即可快速完成名冊與報名！</p>
+        <form onSubmit={handleSelfRegisterSubmit} className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">您的姓名 *</label>
+            <input
+              type="text"
+              required
+              value={selfName}
+              onChange={(e) => setSelfName(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">所屬部門</label>
+            <input
+              type="text"
+              value={selfDept}
+              onChange={(e) => setSelfDept(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+              placeholder="例：研發課 或 自訂部門名稱"
+            />
+            <div className="flex flex-wrap gap-1.5 items-center mt-2">
+              {departments.map((dept) => (
+                <button
+                  key={dept}
+                  type="button"
+                  onClick={() => setSelfDept(dept)}
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                    selfDept === dept ? 'bg-orange-600 text-white border-orange-600' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                  }`}
+                >
+                  {dept}
+                </button>
+              ))}
+              <div className="flex items-center gap-1 mt-1 sm:mt-0">
                 <input
                   type="text"
-                  placeholder="例：研發部 或 自訂部門名稱"
-                  value={newDept}
-                  onChange={(e) => setNewDept(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+                  placeholder="自訂新部門..."
+                  value={customSelfDeptInput}
+                  onChange={(e) => setCustomSelfDeptInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomSelfDept(); } }}
+                  className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-[11px] w-28 focus:outline-none focus:ring-1 focus:ring-orange-500"
                 />
-                <div className="flex flex-wrap gap-1.5 items-center mt-2">
-                  {departments.map((dept) => (
-                    <button
-                      key={dept}
-                      type="button"
-                      onClick={() => setNewDept(dept)}
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-                        newDept === dept ? 'bg-orange-600 text-white border-orange-600' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-                      }`}
-                    >
-                      {dept}
-                    </button>
-                  ))}
-                  <div className="flex items-center gap-1 mt-1 sm:mt-0">
-                    <input
-                      type="text"
-                      placeholder="自訂新部門..."
-                      value={customNewDeptInput}
-                      onChange={(e) => setCustomNewDeptInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomNewDept(); } }}
-                      className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-[11px] w-28 focus:outline-none focus:ring-1 focus:ring-orange-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCustomNewDept}
-                      className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-black w-6 h-6 rounded-lg flex items-center justify-center cursor-pointer shadow-2xs"
-                      title="新增自訂部門"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div className="flex space-x-2 justify-end pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+                  onClick={handleAddCustomSelfDept}
+                  className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-black w-6 h-6 rounded-lg flex items-center justify-center cursor-pointer shadow-2xs"
+                  title="新增自訂部門"
                 >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-orange-600 text-white text-xs font-bold rounded-xl cursor-pointer"
-                >
-                  新增
+                  +
                 </button>
               </div>
-            </form>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">電子郵件 Email *</label>
+            <input
+              type="email"
+              required
+              value={selfEmail}
+              onChange={(e) => setSelfEmail(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+            />
+          </div>
+          <div className="flex space-x-2 justify-end pt-2">
+            <button
+              type="button"
+              onClick={() => setIsSelfRegisterModalOpen(false)}
+              className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-orange-600 text-white text-xs font-bold rounded-xl cursor-pointer"
+            >
+              確認送出並報名
+            </button>
+          </div>
+        </form>
+      </ModalPortal>
+
+      <ModalPortal isOpen={clearModalOpen} className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 shadow-xl">
+        <h3 className="text-lg font-bold text-slate-900">確認一鍵清除所有社員？</h3>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          此操作將會清空目前該社團的所有社員名冊與出缺席資料。確定要繼續嗎？
+        </p>
+        <div className="flex space-x-2 justify-end pt-2">
+          <button
+            type="button"
+            onClick={() => setClearModalOpen(false)}
+            className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onClearAllMembers();
+              setClearModalOpen(false);
+            }}
+            className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl cursor-pointer"
+          >
+            確定清除全部
+          </button>
+        </div>
+      </ModalPortal>
+
+      <ModalPortal isOpen={Boolean(careModalOpen && careMember)} className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-5 border border-slate-200 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span>✉️</span> 缺席關懷通知與郵件預覽
+            </h3>
+            <p className="text-xs text-slate-500">社員：{careMember?.name} ｜ 連續未到：{careMember?.consecutiveAbsences} 次</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCareModalOpen(false)}
+            className="text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 text-xs">
+          <div>
+            <span className="font-bold text-slate-500">收件人 (Gmail)：</span>
+            <span className="text-slate-900 font-mono ml-2">{careMember?.email}</span>
+          </div>
+          <div>
+            <span className="font-bold text-slate-500">LINE / 電話：</span>
+            <span className="text-slate-900 font-mono ml-2">{careMember?.phone}</span>
+          </div>
+          <div>
+            <span className="font-bold text-slate-500 block mb-1">信件主旨：</span>
+            <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-slate-800 font-bold">
+              【LAGIS 社團關懷】近期球敘缺席關懷與揮拍邀請 🏸
+            </div>
+          </div>
+          <div>
+            <span className="font-bold text-slate-500 block mb-1">信件與 LINE 訊息內容：</span>
+            <div className="bg-white p-3 rounded-lg border border-slate-200 text-slate-700 leading-relaxed whitespace-pre-line font-sans">
+              {careMember ? `親愛的 ${careMember.name} 同仁您好：\n\n系統注意到您近期已連續 ${careMember.consecutiveAbsences} 次未參與常廣社團球敘（累計出席 ${careMember.totalAttendance} 場）。常廣羽球/網球社非常關心您的身心健康與工作狀況！\n\n生活與工作忙碌之餘，歡迎隨時回來與大家一同揮拍流汗、放鬆身心。\n\n如需請假或有任何建議，歡迎隨時聯繫社團幹部。\n\n祝 平安順心\nLAGIS 社團幹部團隊 敬上` : ''}
+            </div>
           </div>
         </div>
-      )}
 
-      {isSelfRegisterModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 shadow-xl">
-            <h3 className="text-lg font-bold text-slate-900">自動帶入登入資料報名</h3>
-            <p className="text-xs text-slate-500">已自動載入您的登入身分與部門，點擊確認即可快速完成名冊與報名！</p>
-            <form onSubmit={handleSelfRegisterSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">您的姓名 *</label>
+        {sendSuccessToast && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2">
+            <span>🎉</span> 成功！已透過 Gmail 伺服器與 LINE Bot 成功發送關懷提醒通知！
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+          {careMember && (
+            <a
+              href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(careMember.email)}&su=${encodeURIComponent('【LAGIS 社團關懷】近期球敘缺席關懷與揮拍邀請 🏸')}&body=${encodeURIComponent(`親愛的 ${careMember.name} 同仁您好：\n\n系統注意到您近期已連續 ${careMember.consecutiveAbsences} 次未參與常廣社團球敘（累計出席 ${careMember.totalAttendance} 場）。常廣羽球/網球社非常關心您的身心健康與工作狀況！\n\n生活與工作忙碌之餘，歡迎隨時回來與大家一同揮拍流汗、放鬆身心。\n\n如需請假或有任何建議，歡迎隨時聯繫社團幹部。\n\n祝 平安順心\nLAGIS 社團幹部團隊 敬上`)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-bold text-orange-600 hover:text-orange-700 underline flex items-center gap-1"
+            >
+              <span>🌐</span> 直接開啟 Gmail 網頁撰寫
+            </a>
+          )}
+          <div className="flex space-x-2">
+            <button
+              type="button"
+              onClick={() => setCareModalOpen(false)}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+            >
+              關閉
+            </button>
+            <button
+              type="button"
+              onClick={handleDispatchEmail}
+              className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
+            >
+              <span>🚀</span> 立即發送 Gmail 與 LINE 通知
+            </button>
+          </div>
+        </div>
+      </ModalPortal>
+
+      <ModalPortal isOpen={Boolean(deleteModalOpen && memberToDelete)} className="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 border border-slate-200 shadow-xl text-center">
+        <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto">
+          <Trash2 className="w-6 h-6" />
+        </div>
+        <h3 className="text-lg font-bold text-slate-900">確認刪除社員</h3>
+        <p className="text-xs text-slate-600 leading-relaxed">
+          確定要從名冊中刪除社員 <strong className="text-rose-600">「{memberToDelete?.name}」</strong> 嗎？此操作將同時移除該社員的所有報名與出勤紀錄。
+        </p>
+        <div className="flex space-x-2 pt-2">
+          <button
+            type="button"
+            onClick={() => {
+              setDeleteModalOpen(false);
+              setMemberToDelete(null);
+            }}
+            className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (memberToDelete) {
+                onDeleteMember(memberToDelete.id);
+              }
+              setDeleteModalOpen(false);
+              setMemberToDelete(null);
+            }}
+            className="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer"
+          >
+            確認刪除
+          </button>
+        </div>
+      </ModalPortal>
+
+      <ModalPortal isOpen={isEditModalOpen} className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-slate-900">編輯社員資料 (管理員模式)</h3>
+          <span className="text-[10px] font-bold bg-[#274A56] text-[#F4F1E7] px-2.5 py-1 rounded-full">
+            🛡️ 完整編輯權限
+          </span>
+        </div>
+        <form onSubmit={handleEditMemberSubmit} className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">姓名 *</label>
+            <input
+              type="text"
+              required
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">所屬部門 *</label>
+            <input
+              type="text"
+              required
+              value={editDept}
+              onChange={(e) => setEditDept(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+            />
+            <div className="flex flex-wrap gap-1.5 items-center mt-2">
+              {departments.map((dept) => (
+                <button
+                  key={dept}
+                  type="button"
+                  onClick={() => setEditDept(dept)}
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                    editDept === dept ? 'bg-orange-600 text-white border-orange-600' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                  }`}
+                >
+                  {dept}
+                </button>
+              ))}
+              <div className="flex items-center gap-1 mt-1 sm:mt-0">
                 <input
                   type="text"
-                  required
-                  value={selfName}
-                  onChange={(e) => setSelfName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+                  placeholder="自訂新部門..."
+                  value={customEditDeptInput}
+                  onChange={(e) => setCustomEditDeptInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomEditDept(); } }}
+                  className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-[11px] w-28 focus:outline-none focus:ring-1 focus:ring-orange-500"
                 />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">所屬部門</label>
-                <input
-                  type="text"
-                  value={selfDept}
-                  onChange={(e) => setSelfDept(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
-                  placeholder="例：研發部 或 自訂部門名稱"
-                />
-                <div className="flex flex-wrap gap-1.5 items-center mt-2">
-                  {departments.map((dept) => (
-                    <button
-                      key={dept}
-                      type="button"
-                      onClick={() => setSelfDept(dept)}
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-                        selfDept === dept ? 'bg-orange-600 text-white border-orange-600' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-                      }`}
-                    >
-                      {dept}
-                    </button>
-                  ))}
-                  <div className="flex items-center gap-1 mt-1 sm:mt-0">
-                    <input
-                      type="text"
-                      placeholder="自訂新部門..."
-                      value={customSelfDeptInput}
-                      onChange={(e) => setCustomSelfDeptInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomSelfDept(); } }}
-                      className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-[11px] w-28 focus:outline-none focus:ring-1 focus:ring-orange-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCustomSelfDept}
-                      className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-black w-6 h-6 rounded-lg flex items-center justify-center cursor-pointer shadow-2xs"
-                      title="新增自訂部門"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">電子郵件 Email *</label>
-                <input
-                  type="email"
-                  required
-                  value={selfEmail}
-                  onChange={(e) => setSelfEmail(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
-                />
-              </div>
-              <div className="flex space-x-2 justify-end pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsSelfRegisterModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+                  onClick={handleAddCustomEditDept}
+                  className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-black w-6 h-6 rounded-lg flex items-center justify-center cursor-pointer shadow-2xs"
+                  title="新增自訂部門"
                 >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-orange-600 text-white text-xs font-bold rounded-xl cursor-pointer"
-                >
-                  確認送出並報名
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {clearModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 shadow-xl">
-            <h3 className="text-lg font-bold text-slate-900">確認一鍵清除所有社員？</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              此操作將會清空目前該社團的所有社員名冊與出缺席資料。確定要繼續嗎？
-            </p>
-            <div className="flex space-x-2 justify-end pt-2">
-              <button
-                type="button"
-                onClick={() => setClearModalOpen(false)}
-                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onClearAllMembers();
-                  setClearModalOpen(false);
-                }}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl cursor-pointer"
-              >
-                確定清除全部
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {careModalOpen && careMember && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-5 border border-slate-200 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span>✉️</span> 缺席關懷通知與郵件預覽
-                </h3>
-                <p className="text-xs text-slate-500">社員：{careMember.name} ｜ 連續未到：{careMember.consecutiveAbsences} 次</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCareModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 text-xs">
-              <div>
-                <span className="font-bold text-slate-500">收件人 (Gmail)：</span>
-                <span className="text-slate-900 font-mono ml-2">{careMember.email}</span>
-              </div>
-              <div>
-                <span className="font-bold text-slate-500">LINE / 電話：</span>
-                <span className="text-slate-900 font-mono ml-2">{careMember.phone}</span>
-              </div>
-              <div>
-                <span className="font-bold text-slate-500 block mb-1">信件主旨：</span>
-                <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-slate-800 font-bold">
-                  【LAGIS 社團關懷】近期球敘缺席關懷與揮拍邀請 🏸
-                </div>
-              </div>
-              <div>
-                <span className="font-bold text-slate-500 block mb-1">信件與 LINE 訊息內容：</span>
-                <div className="bg-white p-3 rounded-lg border border-slate-200 text-slate-700 leading-relaxed whitespace-pre-line font-sans">
-                  {`親愛的 ${careMember.name} 同仁您好：\n\n系統注意到您近期已連續 ${careMember.consecutiveAbsences} 次未參與常廣社團球敘（累計出席 ${careMember.totalAttendance} 場）。常廣羽球/網球社非常關心您的身心健康與工作狀況！\n\n生活與工作忙碌之餘，歡迎隨時回來與大家一同揮拍流汗、放鬆身心。\n\n如需請假或有任何建議，歡迎隨時聯繫社團幹部。\n\n祝 平安順心\nLAGIS 社團幹部團隊 敬上`}
-                </div>
-              </div>
-            </div>
-
-            {sendSuccessToast && (
-              <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2">
-                <span>🎉</span> 成功！已透過 Gmail 伺服器與 LINE Bot 成功發送關懷提醒通知！
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-              <a
-                href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(careMember.email)}&su=${encodeURIComponent('【LAGIS 社團關懷】近期球敘缺席關懷與揮拍邀請 🏸')}&body=${encodeURIComponent(`親愛的 ${careMember.name} 同仁您好：\n\n系統注意到您近期已連續 ${careMember.consecutiveAbsences} 次未參與常廣社團球敘（累計出席 ${careMember.totalAttendance} 場）。常廣羽球/網球社非常關心您的身心健康與工作狀況！\n\n生活與工作忙碌之餘，歡迎隨時回來與大家一同揮拍流汗、放鬆身心。\n\n如需請假或有任何建議，歡迎隨時聯繫社團幹部。\n\n祝 平安順心\nLAGIS 社團幹部團隊 敬上`)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs font-bold text-orange-600 hover:text-orange-700 underline flex items-center gap-1"
-              >
-                <span>🌐</span> 直接開啟 Gmail 網頁撰寫
-              </a>
-              <div className="flex space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setCareModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
-                >
-                  關閉
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDispatchEmail}
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
-                >
-                  <span>🚀</span> 立即發送 Gmail 與 LINE 通知
+                  +
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {deleteModalOpen && memberToDelete && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 border border-slate-200 shadow-xl text-center">
-            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto">
-              <Trash2 className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900">確認刪除社員</h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              確定要從名冊中刪除社員 <strong className="text-rose-600">「{memberToDelete.name}」</strong> 嗎？此操作將同時移除該社員的所有報名與出勤紀錄。
-            </p>
-            <div className="flex space-x-2 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setDeleteModalOpen(false);
-                  setMemberToDelete(null);
-                }}
-                className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onDeleteMember(memberToDelete.id);
-                  setDeleteModalOpen(false);
-                  setMemberToDelete(null);
-                }}
-                className="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer"
-              >
-                確認刪除
-              </button>
-            </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">電子郵件 Email * (管理員可編輯任何人信箱)</label>
+            <input
+              type="email"
+              required
+              value={editEmail}
+              onChange={(e) => setEditEmail(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+            />
           </div>
-        </div>
-      )}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">聯絡電話 / LINE ID</label>
+            <input
+              type="text"
+              value={editPhone}
+              onChange={(e) => setEditPhone(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">球技分級</label>
+            <select
+              value={editSkill}
+              onChange={(e) => setEditSkill(e.target.value as SkillLevel)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900"
+            >
+              <option value="A-進階">A-進階</option>
+              <option value="B-中階">B-中階</option>
+              <option value="C-初階">C-初階</option>
+            </select>
+          </div>
+          <div className="flex space-x-2 justify-end pt-3">
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(false)}
+              className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-orange-600 text-white text-xs font-bold rounded-xl cursor-pointer"
+            >
+              確認更新
+            </button>
+          </div>
+        </form>
+      </ModalPortal>
     </div>
   );
 };
